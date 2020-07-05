@@ -269,7 +269,7 @@ typedef void(^YTKRequestCompletionBlock)(__kindof YTKBaseRequest *request);
 - (void)requestFailedPreprocessor;
 
 ///  Called on the main thread when request failed.
-- (void)requestFailedFilter;
+- (BOOL)shouldCleanRequestFailedFilter;
 
 ///  The baseURL of request. This should only contain the host part of URL, e.g., http://www.example.com.
 ///  See also `requestUrl`

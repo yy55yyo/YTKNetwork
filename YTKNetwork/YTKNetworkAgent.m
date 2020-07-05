@@ -209,7 +209,7 @@
     }
 
     if (requestSerializationError) {
-        [self requestDidFailWithRequest:request error:requestSerializationError];
+        [self requestDidFailWithRequest:request error:requestSerializationError shouldCleanRequest:nil];
         return;
     }
 
@@ -348,14 +348,20 @@
 
     if (succeed) {
         [self requestDidSucceedWithRequest:request];
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self removeRequestFromRecord:request];
+            [request clearCompletionBlock];
+        });
     } else {
-        [self requestDidFailWithRequest:request error:requestError];
+        [self requestDidFailWithRequest:request error:requestError shouldCleanRequest:^(BOOL shouldClean) {
+            if (shouldClean) {
+                dispatch_async(dispatch_get_main_queue(), ^{
+                    [self removeRequestFromRecord:request];
+                    [request clearCompletionBlock];
+                });
+            }
+        }];
     }
-
-    dispatch_async(dispatch_get_main_queue(), ^{
-        [self removeRequestFromRecord:request];
-        [request clearCompletionBlock];
-    });
 }
 
 - (void)requestDidSucceedWithRequest:(YTKBaseRequest *)request {
@@ -376,7 +382,7 @@
     });
 }
 
-- (void)requestDidFailWithRequest:(YTKBaseRequest *)request error:(NSError *)error {
+- (void)requestDidFailWithRequest:(YTKBaseRequest *)request error:(NSError *)error shouldCleanRequest:(void(^)(BOOL should))cleanBolck {
     request.error = error;
     YTKLog(@"Request %@ failed, status code = %ld, error = %@",
            NSStringFromClass([request class]), (long)request.responseStatusCode, error.localizedDescription);
@@ -408,7 +414,7 @@
     }
     dispatch_async(dispatch_get_main_queue(), ^{
         [request toggleAccessoriesWillStopCallBack];
-        [request requestFailedFilter];
+        BOOL shouldCleanRequest = [request shouldCleanRequestFailedFilter];
 
         if (request.delegate != nil) {
             [request.delegate requestFailed:request];
@@ -417,6 +423,9 @@
             request.failureCompletionBlock(request);
         }
         [request toggleAccessoriesDidStopCallBack];
+        if (cleanBolck) {
+            cleanBolck(shouldCleanRequest);
+        }
     });
 }
 

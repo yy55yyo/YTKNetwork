@@ -140,7 +140,8 @@ NSString *const YTKRequestValidationErrorDomain = @"com.yuantiku.request.validat
 - (void)requestFailedPreprocessor {
 }
 
-- (void)requestFailedFilter {
+- (BOOL)shouldCleanRequestFailedFilter {
+    return YES;
 }
 
 - (NSString *)requestUrl {
